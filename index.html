@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1 class="title">Expense Tracker</h1>
+
+    <div class="container">
+
+        <div class="form-section">
+
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category">
+                    <option>Food</option>
+                    <option>Travel</option>
+                    <option>Shopping</option>
+                    <option>Movie Bill</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Expense Name</label>
+                <input type="text" id="name" placeholder="Expense Name">
+            </div>
+
+            <div class="form-group">
+                <label>Amount</label>
+                <input type="number" id="amount" placeholder="Amount">
+            </div>
+
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="date">
+            </div>
+
+            <button onclick="addExpense()">
+                Add Expense
+            </button>
+
+        </div>
+
+        <div class="search-section">
+            <input 
+                type="search" 
+                id="search"
+                placeholder="Search by expense name"
+                oninput="searchName()"
+            >
+        </div>
+
+        <div class="table-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Category</th>
+                        <th>Expense Item</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tbody-item">
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="sortHigh()">Sort High</button>
+            <button onclick="sortLow()">Sort Low</button>
+            <button class="danger" onclick="clearAll()">Clear All</button>
+        </div>
+    
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Total Expense</h4>
+                <p id="h3-total">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Average Expense</h4>
+                <p id="average">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Highest Expense</h4>
+                <p id="highvalue"></p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Lowest Expense</h4>
+                <p id="lowestvalue"></p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Expense Count</h4>
+                <p id="expenseCount">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Food Total</h4>
+                <p id="totalfood">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Food Count</h4>
+                <p id="food">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Travel Total</h4>
+                <p id="totaltravel">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Travel Count</h4>
+                <p id="travel">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Shopping Total</h4>
+                <p id="totalshop">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Shopping Count</h4>
+                <p id="shopping">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Movie Total</h4>
+                <p id="totalmovie">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Movie Count</h4>
+                <p id="movie">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Above ₹500</h4>
+                <p id="greater">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h4>Below ₹500</h4>
+                <p id="lower">0</p>
+            </div>
+
+        </div>
+    </div>
+
+   
+<script>
+    //creating array and object to display the name, amount and category
+    function addExpense(){
+        let category = document.getElementById("category").value
+        let name = document.getElementById("name").value
+        let amount = document.getElementById("amount").value
+        let date = document.getElementById("date").value
+         if (name === "" || amount === ""){
+            alert("please enter name and amount")
+            return
+        }
+        expense.push({
+            name: name,
+            amount:Number(amount),
+            category: category,
+            date: date
+        })
+        //JSON.stringify(expense)
+        let jsonData = JSON.stringify(expense)
+        console.log(jsonData)
+        localStorage.setItem("expense", jsonData)
+
+        renderTable()
+        console.log(expense);
+        document.getElementById('name').value = ""
+        document.getElementById('amount').value = ""
+    }
+    //display all value in table after refresh
+    let expense = []
+    let savedData = localStorage.getItem("expense")
+    if (savedData) {
+        expense = JSON.parse(savedData)
+        renderTable()
+    }
+
+    
+    function renderTable() {
+        //create rows to add value of their own title
+        let tbody = document.getElementById("tbody-item")
+        tbody.innerHTML = ""
+        expense.forEach((expenses, index) => {
+           let row = document.createElement("tr")
+        row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${expenses.category}</td>
+        <td>${expenses.name}</td>
+        <td>${expenses.amount}</td>
+        <td>${expenses.date}</td>
+        <td><button onclick='editExpense(${index})'>Edit</button></td>
+        <td><button onclick='deleteExpense(${index})'>Delete</button></td>`
+        tbody.append(row)
+        console.log(row)
+        });
+
+        //display all the expenses total amount
+        let total = 0
+        expense.forEach((totalexpense) => {
+            total = total + totalexpense.amount
+            return
+        })
+        let totalheading = document.getElementById("h3-total")
+        totalheading.textContent = total
+
+
+        // display the average of all the expenses
+        if(expense.length >0) {
+            average = total/expense.length
+        }
+        else{
+            average = 0
+        }
+        let totalaverage = document.getElementById('average')
+        totalaverage.textContent =  average
+
+
+        //displaying the highest value, amount all the expenses
+        if (expense.length > 0) {
+            let highest = expense[0]
+
+            expense.forEach(exp => {
+                if (exp.amount > highest.amount) {
+                    highest = exp
+                }
+            });
+            let result = highest.name + " : " + highest.amount
+            let highestValue = document.getElementById("highvalue")
+            highestValue.textContent = result
+        }
+
+        //displaying the lowest value, amount of all the expenses
+        if (expense.length > 0) {
+            let lowest = expense[0]
+
+            expense.forEach(exp1 => {
+                if (exp1.amount < lowest.amount) {
+                    lowest = exp1
+                }
+            });
+            let result1 = lowest.name + " : " + lowest.amount
+            let lowestValue = document.getElementById("lowestvalue")
+            lowestValue.textContent = result1
+        }
+
+        //display the total count of the expenses
+        let totalCount = expense.length
+
+        let  result2 = totalCount
+        let  expenseCount = document.getElementById('expenseCount')
+        expenseCount.textContent = result2
+
+        //display the  amount count greater than 500
+        let filterExpense = expense.filter(items => {
+            return items.amount >= 500 
+        })
+        let result3 = filterExpense.length
+        let greater1 = document.getElementById('greater')
+        greater1.textContent = result3
+
+        //display the amount count lesser than 500
+        let filterExp = expense.filter (itemex => {
+            return itemex.amount < 500
+        })
+        let result4 = filterExp.length
+        let lowerValue = document.getElementById('lower')
+        lowerValue.textContent = result4
+
+        //display the food category count 
+        let foodExpenses = expense.filter(item => {
+            return item.category.toLowerCase() === 'food'
+        })
+        let foodCount = foodExpenses.length
+        let foods = document.getElementById("food")
+        foods.textContent = foodCount
+
+        //display the food category total amount 
+
+        let foodTotal = 0
+        foodExpenses.forEach(food => {
+            foodTotal = foodTotal + food.amount
+        })
+        let totalFood = document.getElementById('totalfood')
+        totalFood.textContent = foodTotal
+
+
+        //display the travel category count
+        let travelExpenses = expense.filter(item1 => {
+            return item1.category.toLowerCase() === 'travel'
+        })
+        let travelCount = travelExpenses.length
+        let travels = document.getElementById("travel")
+        travels.textContent = travelCount
+
+        //travel category total amount
+
+        let travelTotal = 0
+        travelExpenses.forEach(travel => {
+            travelTotal = travelTotal + travel.amount
+        })
+        let totalTravel = document.getElementById("totaltravel")
+        totalTravel.textContent = travelTotal
+
+
+        //display the shopping category count
+        let shoppingExpenses = expense.filter(item2 => {
+            return item2.category.toLowerCase() === 'shopping'
+        })
+        let shoppingCount = shoppingExpenses.length
+        let shoppings = document.getElementById('shopping')
+        shoppings.textContent = shoppingCount
+
+        //shopping category total amount
+        let shoppingTotal = 0
+        shoppingExpenses.forEach(shopping => {
+            shoppingTotal = shoppingTotal + shopping.amount
+        })
+        let totalShopping = document.getElementById("totalshop")
+        totalShopping.textContent = shoppingTotal
+
+        //display the movie category count
+        let movieExpenses = expense.filter(item3 => {
+            return item3.category.toLowerCase() === 'movie bill'
+        })
+        let movieCount = movieExpenses.length
+        let movies = document.getElementById('movie')
+        movies.textContent = movieCount
+
+        //movie category total amount
+        let movieTotal = 0
+        movieExpenses.forEach(movie => {
+            movieTotal = movieTotal + movie.amount
+        })
+        let totalMovie = document.getElementById("totalmovie")
+        totalMovie.textContent = movieTotal
+    }
+
+    //sorting the Amount from High to Low
+    function sortHigh(){
+        let sortHighamount = expense.sort((a, b) => {
+               return b.amount - a.amount        
+        })
+        console.log(sortHighamount)
+        renderTable()
+    }
+
+    //sorting the amount from Low to High
+    function sortLow() {
+        let sortLowamount = expense.sort((a, b) => {
+                return a.amount - b.amount
+        })
+        console.log(sortLowamount)
+        renderTable()
+    }
+
+    //clear all the values in table 
+    function clearAll() {
+        
+        let resultOk  = confirm("Are you sure?")
+        if (resultOk) {
+            expense = []
+            localStorage.removeItem("expense")
+            renderTable();
+        }
+    }
+
+    //searching the value by expense name
+    function searchName() {
+        let searchName = document.getElementById("search").value
+        let result = expense.find(expense1 => 
+            expense1.name.toLowerCase() === searchName.toLowerCase())
+        if (result) {
+            alert(result.name + " : " + result.amount)
+        }
+        else{
+            alert("Expense not found")
+        }
+        renderTable()
+        document.getElementById("search").value = ""
+    }
+
+    //edit the amount of the expenses 
+    function editExpense(index) {
+        let newAmount = prompt("Enter the amount")
+        if(newAmount === null){
+            return
+        }
+        expense[index].amount = Number(newAmount)
+        JSON.stringify(expense)
+        let editData = JSON.stringify(expense)
+        localStorage.setItem("expense", editData)
+        renderTable()
+    }
+
+    // delete the expenses from the table
+    function deleteExpense(index){
+        expense.splice(index, 1)
+        JSON.stringify(expense)
+        let deleteData = JSON.stringify(expense)
+        localStorage.setItem('expense', deleteData)
+        renderTable()
+    }
+
+</script>
+</body>
+</html>
