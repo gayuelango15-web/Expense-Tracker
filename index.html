@@ -6,10 +6,16 @@
     <title>Expense</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <body>
 
     <h1 class="title">Expense Tracker</h1>
 
+    <div class="top-actions">
+        <button onclick="exportCSV()">📥 Export CSV</button>
+    </div>
+    
     <div class="container">
 
         <div class="form-section">
@@ -17,10 +23,10 @@
             <div class="form-group">
                 <label>Category</label>
                 <select id="category">
-                    <option>Food</option>
-                    <option>Travel</option>
-                    <option>Shopping</option>
-                    <option>Movie Bill</option>
+                    <option>🍔 Food</option>
+                    <option>✈️ Travel</option>
+                    <option>🛍️ Shopping</option>
+                    <option>🎬 Movie Bill</option>
                 </select>
             </div>
 
@@ -39,7 +45,7 @@
                 <input type="date" id="date">
             </div>
 
-            <button onclick="addExpense()">
+            <button class="add-btn" onclick="addExpense()">
                 Add Expense
             </button>
 
@@ -63,7 +69,8 @@
                         <th>Expense Item</th>
                         <th>Amount</th>
                         <th>Date</th>
-                        <th>Action</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
                     </tr>
                 </thead>
 
@@ -71,6 +78,11 @@
 
                 </tbody>
             </table>
+            <div id="emptyState">
+                📊 No Expenses Yet
+
+                <p>Start adding your expenses.</p>
+            </div>
         </div>
 
         <div class="action-buttons">
@@ -78,7 +90,28 @@
             <button onclick="sortLow()">Sort Low</button>
             <button class="danger" onclick="clearAll()">Clear All</button>
         </div>
+
+        <div class="budget-card">
+            <h3>Monthly Budget</h3>
+
+            <input 
+                type="number"
+                id="budget"
+                placeholder="Enter Budget"
+            >
+
+            <button onclick="saveBudget()">
+                Save Budget
+            </button>
+
+            <div class="progress-container">
+                <div id="progressBar"></div>
+            </div>
+
+            <h4 id="remaining"></h4>
+        </div>
     
+        <h2>Summary</h2>
         <div class="stats-grid">
             <div class="stat-card">
                 <h4>Total Expense</h4>
@@ -104,9 +137,13 @@
                 <h4>Expense Count</h4>
                 <p id="expenseCount">0</p>
             </div>
+        </div>
+
+        <h2>Categories</h2>
+        <div class="category-grid">
 
             <div class="stat-card">
-                <h4>Food Total</h4>
+                <h4>🍔 Food Total</h4>
                 <p id="totalfood">0</p>
             </div>
 
@@ -116,7 +153,7 @@
             </div>
 
             <div class="stat-card">
-                <h4>Travel Total</h4>
+                <h4>✈️ Travel Total</h4>
                 <p id="totaltravel">0</p>
             </div>
 
@@ -126,7 +163,7 @@
             </div>
 
             <div class="stat-card">
-                <h4>Shopping Total</h4>
+                <h4>🛍️ Shopping Total</h4>
                 <p id="totalshop">0</p>
             </div>
 
@@ -136,7 +173,7 @@
             </div>
 
             <div class="stat-card">
-                <h4>Movie Total</h4>
+                <h4>🎬 Movie Total</h4>
                 <p id="totalmovie">0</p>
             </div>
 
@@ -156,6 +193,10 @@
             </div>
 
         </div>
+        <div class="card">
+            <canvas id="expenseChart"></canvas>
+        </div>
+
     </div>
 
    
@@ -171,6 +212,7 @@
             return
         }
         expense.push({
+            id: Date.now(),
             name: name,
             amount:Number(amount),
             category: category,
@@ -195,23 +237,33 @@
     }
 
     
-    function renderTable() {
+    function renderTable(filteredExpenses = expense) {
         //create rows to add value of their own title
         let tbody = document.getElementById("tbody-item")
         tbody.innerHTML = ""
-        expense.forEach((expenses, index) => {
+
+        filteredExpenses.forEach((expenses, index) => {
            let row = document.createElement("tr")
-        row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${expenses.category}</td>
-        <td>${expenses.name}</td>
-        <td>${expenses.amount}</td>
-        <td>${expenses.date}</td>
-        <td><button onclick='editExpense(${index})'>Edit</button></td>
-        <td><button onclick='deleteExpense(${index})'>Delete</button></td>`
-        tbody.append(row)
-        console.log(row)
+            row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${expenses.category}</td>
+            <td>${expenses.name}</td>
+            <td>${expenses.amount}</td>
+            <td>${expenses.date}</td>
+            <td><button onclick='editExpense(${expenses.id})'>Edit</button></td>
+            <td><button onclick='deleteExpense(${expenses.id})'>Delete</button></td>`
+            tbody.append(row)
+            console.log(row)
         });
+
+        let emptyState = document.getElementById("emptyState");
+
+        if(expense.length === 0) {
+            emptyState.style.display='block';
+        }
+        else {
+            emptyState.style.display='none';
+        }
 
         //display all the expenses total amount
         let total = 0
@@ -222,8 +274,9 @@
         let totalheading = document.getElementById("h3-total")
         totalheading.textContent = total
 
-
         // display the average of all the expenses
+        let average;
+
         if(expense.length >0) {
             average = total/expense.length
         }
@@ -287,7 +340,7 @@
 
         //display the food category count 
         let foodExpenses = expense.filter(item => {
-            return item.category.toLowerCase() === 'food'
+            return item.category.includes("Food")
         })
         let foodCount = foodExpenses.length
         let foods = document.getElementById("food")
@@ -305,7 +358,7 @@
 
         //display the travel category count
         let travelExpenses = expense.filter(item1 => {
-            return item1.category.toLowerCase() === 'travel'
+            return item1.category.includes("Travel")
         })
         let travelCount = travelExpenses.length
         let travels = document.getElementById("travel")
@@ -323,7 +376,7 @@
 
         //display the shopping category count
         let shoppingExpenses = expense.filter(item2 => {
-            return item2.category.toLowerCase() === 'shopping'
+            return item2.category.includes("Shopping")
         })
         let shoppingCount = shoppingExpenses.length
         let shoppings = document.getElementById('shopping')
@@ -339,7 +392,7 @@
 
         //display the movie category count
         let movieExpenses = expense.filter(item3 => {
-            return item3.category.toLowerCase() === 'movie bill'
+            return item3.category.includes("Movie")
         })
         let movieCount = movieExpenses.length
         let movies = document.getElementById('movie')
@@ -352,6 +405,9 @@
         })
         let totalMovie = document.getElementById("totalmovie")
         totalMovie.textContent = movieTotal
+
+        updateBudget();
+        updateChart();
     }
 
     //sorting the Amount from High to Low
@@ -383,41 +439,159 @@
         }
     }
 
+    function updateBudget() {
+
+        let total = 0;
+        expense.forEach(item => {
+            total += item.amount;
+        });
+
+        let remaining = budget - total;
+
+        let percent = 0;
+        if(budget > 0) {
+            percent = (total/budget) * 100;
+        } 
+        if(percent > 100) {
+            percent = 100;
+        }
+
+        document.getElementById('progressBar').style.width = percent + "%";
+
+        document.getElementById("remaining").textContent = "Remaining :  ₹" + remaining;
+
+    }
+
+    let budget = 0;
+
+    function saveBudget() {
+        budget = Number (document.getElementById('budget').value);
+
+        updateBudget();
+    }
+
     //searching the value by expense name
     function searchName() {
-        let searchName = document.getElementById("search").value
-        let result = expense.find(expense1 => 
-            expense1.name.toLowerCase() === searchName.toLowerCase())
-        if (result) {
-            alert(result.name + " : " + result.amount)
-        }
-        else{
-            alert("Expense not found")
-        }
-        renderTable()
-        document.getElementById("search").value = ""
+        let search = document.getElementById("search").value.toLowerCase();
+
+        let filtered = expense.filter(item => 
+            item.name.toLowerCase().includes(search)
+        );
+        
+        renderTable(filtered)
+    }
+
+    function exportCSV() {
+        let csv = "Category, Name, Amount, Date\n";
+        
+        expense.forEach(item => {
+            csv += 
+            `${item.category},
+            ${item.name},
+            ${item.amount},
+            ${item.date}\n`;
+        });
+
+        let blob =
+        new Blob([csv],
+        {type:"text/csv"});
+
+        let url =
+        URL.createObjectURL(blob);
+
+        let a =
+        document.createElement('a');
+
+        a.href = url;
+        a.download = 'expenses.csv';
+
+        a.click();
     }
 
     //edit the amount of the expenses 
-    function editExpense(index) {
+    function editExpense(id) {
         let newAmount = prompt("Enter the amount")
         if(newAmount === null){
             return
         }
-        expense[index].amount = Number(newAmount)
-        JSON.stringify(expense)
-        let editData = JSON.stringify(expense)
-        localStorage.setItem("expense", editData)
+        let item = expense.find(exp => exp.id === id);
+
+        document.getElementById("name").value = item.name;
+        document.getElementById("amount").value = item.amount;
+        document.getElementById("date").value = item.date;
+        
+        if(!item) {
+            return;
+        }
+
+        item.amount = Number(newAmount);
+
+        localStorage.setItem('expense', JSON.stringify(expense));
+        
         renderTable()
     }
 
     // delete the expenses from the table
-    function deleteExpense(index){
-        expense.splice(index, 1)
-        JSON.stringify(expense)
-        let deleteData = JSON.stringify(expense)
-        localStorage.setItem('expense', deleteData)
-        renderTable()
+    function deleteExpense(id){
+        console.log(id);
+
+        expense = expense.filter(item =>
+            item.id !== id
+        );
+
+        localStorage.setItem('expense',
+         JSON.stringify(expense));
+        renderTable();
+    }
+
+    let chart;
+
+    function updateChart() {
+
+        let food = 0;
+        let travel = 0;
+        let shopping = 0;
+        let movie = 0;
+
+        expense.forEach(item => {
+            if(item.category.includes("Food"))
+                food+=item.amount;
+
+            if(item.category.includes("Travel"))
+                travel+=item.amount;
+
+            if(item.category.includes("Shopping"))
+                shopping+=item.amount;
+
+            if(item.category.includes("Movie"))
+                movie+=item.amount;
+        });
+
+        if(chart) {
+            chart.destroy();
+        }
+
+        chart = new Chart(
+            document.getElementById('expenseChart'),
+            {
+                type:"pie",
+                data: {
+                    labels:[
+                        "Food",
+                        "Travel",
+                        "Shopping",
+                        "Movie"
+                    ],
+                    datasets:[{
+                        data:[
+                            food,
+                            travel,
+                            shopping,
+                            movie
+                        ]
+                    }]
+                }
+            });
     }
 
 </script>
